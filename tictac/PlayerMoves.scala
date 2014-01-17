@@ -28,8 +28,8 @@ object PlayerMoves {
   }
 
   // Minimax
-  def getMoveMinimax(oracle: GameOracle[Position, Int, Boolean], position: Position): (Int, Int) = {
-    val strategy = MinimaxStrategy[Position, Int, Boolean](6)
+  def getMoveMinimax(oracle: GameOracle[Position, Int, Boolean], depth: Int, position: Position): (Int, Int) = {
+    val strategy = MinimaxStrategy[Position, Int, Boolean](depth)
 
     val move = strategy.pickMove(TicTacKuRules, oracle, IntOrdering, position, position.legalMoves.toList)
     move match {

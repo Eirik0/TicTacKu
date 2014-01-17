@@ -177,7 +177,8 @@ object TicTac extends SimpleSwingApplication {
 
     registerPlayer("Human", Human)
     registerPlayer("Rando", Computer(getRandomMove))
-    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, _)))
+    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, 6, _)))
+    registerPlayer("Machiavelli", Computer(getMoveMinimax(BothPossibleWins, 6, _)))
     registerPlayer("JPlayer", Computer(getMovej))
 
     val playerList = players.keySet.toList.sortWith(_ < _) // So Human comes first
@@ -287,7 +288,7 @@ object TicTac extends SimpleSwingApplication {
                   Thread.sleep(33L)
                 } while (!game.gameOver)
               }
-              futureGame.onSuccess { case _ => update() }
+              //futureGame.onSuccess { case _ => {} }
             }
             case (Computer(_), Human) if game.isP1Turn => moveComputer()
             case (_, Computer(_)) if !game.isP1Turn => moveComputer()
