@@ -86,11 +86,13 @@ object TicTac extends SimpleSwingApplication {
       if (game.isP1Turn) g.setColor(p1Color) else g.setColor(p2Color)
 
       // Active Board Highlight
-      if (game.activeBoard != -1) {
-        val (activeBoardX, activeBoardY) = BoardUtils.getActiveBoardXY(game.activeBoard)
-        drawThickRectangle(g, (activeBoardX * dx).toInt, (activeBoardY * dy).toInt, dx.toInt, dy.toInt)
-      } else {
-        drawThickRectangle(g, 1, 1, width - 2, height - 2)
+      if (!game.isGameOver) {
+        if (game.activeBoard != -1) {
+          val (activeBoardX, activeBoardY) = BoardUtils.getActiveBoardXY(game.activeBoard)
+          drawThickRectangle(g, (activeBoardX * dx).toInt, (activeBoardY * dy).toInt, dx.toInt, dy.toInt)
+        } else {
+          drawThickRectangle(g, 1, 1, width - 2, height - 2)
+        }
       }
 
       // Mouse Highlight
@@ -100,29 +102,22 @@ object TicTac extends SimpleSwingApplication {
 
         g.fillOval(mouseX, mouseY, (ddx / 2).toInt, (ddy / 2).toInt)
 
-        if (b == game.activeBoard || game.activeBoard == -1) drawThickRectangle(g, sqX + guiSpacing / 2, sqY + guiSpacing / 2, ddx.toInt - guiSpacing, ddy.toInt - guiSpacing)
+        if ((b == game.activeBoard || game.activeBoard == -1) && game.isLegalMove(b, sb)) {
+          drawThickRectangle(g, sqX + guiSpacing / 2, sqY + guiSpacing / 2, ddx.toInt - guiSpacing, ddy.toInt - guiSpacing)
+        }
       }
 
       // Special drawing if the game is over
       if (game.isGameOver) {
-        var text = "Wins!!!"
         val scale = scala.math.min(width, height) / 10
-        font = new Font("Consolas", Font.BOLD, scale)
-        g.setFont(font)
+        g.setFont(new Font("Consolas", Font.BOLD, scale))
 
-        if (game.doesP1Win) {
-          g.setColor(p1Color); g.drawString("Blue", scale, height / 2)
-          g.setColor(blendWinColor(p1Color))
-        } else if (game.doesP2Win) {
-          g.setColor(p2Color); g.drawString("Red", scale, height / 2)
-          g.setColor(blendWinColor(p2Color))
-        } else {
+        if (game.doesP1Win) drawWin(g, "Blue Wins!!!", blendWinColor(p1Color), width, height)
+        else if (game.doesP2Win) drawWin(g, "Red Wins!!!", blendWinColor(p2Color), width, height)
+        else {
           val avg = new Color((p1Color.getRed + p2Color.getRed) / 2, (p1Color.getGreen + p2Color.getGreen) / 2, (p1Color.getBlue + p2Color.getBlue) / 2)
-          g.setColor(blendWinColor(avg))
-          text = "Draw..."
+          drawWin(g, "Draw ...", blendWinColor(avg), width, height)
         }
-
-        g.drawString(text, width / 2 - scale, height / 2)
       }
     }
 
@@ -185,8 +180,9 @@ object TicTac extends SimpleSwingApplication {
 
     registerPlayer("Human", Human)
     registerPlayer("Rando", Computer(getRandomMove))
-    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, 6, _)))
-    registerPlayer("Machiavelli", Computer(getMoveMinimax(BothPossibleWins, 6, _)))
+    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, 5, _)))
+    registerPlayer("Machiavelli", Computer(getMoveMinimax(PossibleWins, 5, _)))
+    registerPlayer("Sandy", Computer(getMoveMinimax(MovesToWin, 5, _)))
     registerPlayer("JPlayer", Computer(getMovej))
 
     val playerList = players.keySet.toList.sortWith(_ < _) // So Human comes first
@@ -248,7 +244,7 @@ object TicTac extends SimpleSwingApplication {
    * Game-UI Interactions
    */
   def moveMaybe(b: Int, sb: Int, makeComputerMove: Boolean) = {
-    if (game.isValidMove(b, sb)) {
+    if (game.isLegalMove(b, sb)) {
       game.makeMove(b, sb) match {
         case Some(win) => ticTacPanel.wonBoards += win
         case None => {}
@@ -259,7 +255,8 @@ object TicTac extends SimpleSwingApplication {
   }
 
   def moveComputer() = {
-    if (!game.isGameOver) {
+    Thread.sleep(33L)
+    if (!game.isGameOver && !game.isComputerThinking) {
       val futureMove = future {
         game.makeComputerMove() match {
           case Some(win) => ticTacPanel.wonBoards += win
@@ -309,7 +306,6 @@ object TicTac extends SimpleSwingApplication {
               val futureGame = future {
                 do {
                   moveComputer()
-                  Thread.sleep(33L)
                 } while (!game.isGameOver)
               }
               //futureGame.onSuccess { case _ => {} }

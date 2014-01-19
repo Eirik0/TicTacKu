@@ -2,6 +2,7 @@ package tictac
 
 import scala.annotation.switch
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
 
 object BoardUtils {
   def getBoardNM(x0: Int, y0: Int) = {
@@ -132,32 +133,36 @@ object BoardUtils {
   // 0 1 2
   // 3 4 5
   // 6 7 8
+  def findWin(sb: ArrayBuffer[Char], player: Char): Option[(Int, Int)] = {
+    if (sb(4) == player) {
+      if (sb(0) == player && sb(1) == player && sb(2) == player) return Some((0, 2))
+      if (sb(3) == player && sb(5) == player) return Some((3, 5))
+      if (sb(6) == player && sb(7) == player && sb(8) == player) return Some((6, 8))
+
+      if (sb(0) == player && sb(3) == player && sb(6) == player) return Some((0, 6))
+      if (sb(1) == player && sb(7) == player) return Some((1, 7))
+      if (sb(2) == player && sb(5) == player && sb(8) == player) return Some((2, 8))
+
+      if (sb(0) == player && sb(8) == player) return Some((0, 8))
+      if (sb(2) == player && sb(6) == player) return Some((2, 6))
+    }
+
+    if (sb(0) == player && sb(1) == player && sb(2) == player) return Some((0, 2))
+    if (sb(6) == player && sb(7) == player && sb(8) == player) return Some((6, 8))
+
+    if (sb(0) == player && sb(3) == player && sb(6) == player) return Some((0, 6))
+    if (sb(2) == player && sb(5) == player && sb(8) == player) return Some((2, 8))
+
+    None
+  }
+
   def findWin(sb: ArrayBuffer[Char]): Option[(Int, Int)] = {
-    // X wins
-    if (sb(0) == 'X' && sb(1) == 'X' && sb(2) == 'X') return Some((0, 2))
-    if (sb(3) == 'X' && sb(4) == 'X' && sb(5) == 'X') return Some((3, 5))
-    if (sb(6) == 'X' && sb(7) == 'X' && sb(8) == 'X') return Some((6, 8))
+    val xWins = findWin(sb, 'X')
+    if (xWins != None) return xWins
 
-    if (sb(0) == 'X' && sb(3) == 'X' && sb(6) == 'X') return Some((0, 6))
-    if (sb(1) == 'X' && sb(4) == 'X' && sb(7) == 'X') return Some((1, 7))
-    if (sb(2) == 'X' && sb(5) == 'X' && sb(8) == 'X') return Some((2, 8))
+    val oWins = findWin(sb, 'O')
+    if (oWins != None) return oWins
 
-    if (sb(0) == 'X' && sb(4) == 'X' && sb(8) == 'X') return Some((0, 8))
-    if (sb(2) == 'X' && sb(4) == 'X' && sb(6) == 'X') return Some((2, 6))
-
-    // O wins
-    if (sb(0) == 'O' && sb(1) == 'O' && sb(2) == 'O') return Some((0, 2))
-    if (sb(3) == 'O' && sb(4) == 'O' && sb(5) == 'O') return Some((3, 5))
-    if (sb(6) == 'O' && sb(7) == 'O' && sb(8) == 'O') return Some((6, 8))
-
-    if (sb(0) == 'O' && sb(3) == 'O' && sb(6) == 'O') return Some((0, 6))
-    if (sb(1) == 'O' && sb(4) == 'O' && sb(7) == 'O') return Some((1, 7))
-    if (sb(2) == 'O' && sb(5) == 'O' && sb(8) == 'O') return Some((2, 8))
-
-    if (sb(0) == 'O' && sb(4) == 'O' && sb(8) == 'O') return Some((0, 8))
-    if (sb(2) == 'O' && sb(4) == 'O' && sb(6) == 'O') return Some((2, 6))
-
-    // No wins
     None
   }
 
@@ -177,6 +182,47 @@ object BoardUtils {
     if ((sb(2) == ' ' && sb(4) == xo && sb(6) == xo) || (sb(2) == xo && sb(4) == ' ' && sb(6) == xo) || (sb(2) == xo && sb(4) == xo && sb(6) == ' ')) total += 1
 
     total
+  }
+
+  def scorePossibleWins(board: ArrayBuffer[Char], me: Char, them: Char) = {
+    val player = me == 'X'
+    var myWins = 8
+    var theirWins = 8
+
+    if (!board.forall(_ == ' ')) {
+      if (board(4) == them) {
+        myWins -= 4
+      } else if (board(4) == me) {
+        theirWins -= 4
+      } else {
+        if (board(3) == them || board(5) == them) myWins -= 1
+
+        if (board(1) == them || board(7) == them) myWins -= 1
+
+        if (board(0) == them || board(8) == them) myWins -= 1
+        if (board(2) == them || board(6) == them) myWins -= 1
+
+        if (board(3) == me || board(5) == me) theirWins -= 1
+
+        if (board(1) == me || board(7) == me) theirWins -= 1
+
+        if (board(0) == me || board(8) == me) theirWins -= 1
+        if (board(2) == me || board(6) == me) theirWins -= 1
+      }
+      if (board(0) == them || board(1) == them || board(2) == them) myWins -= 1
+      if (board(6) == them || board(7) == them || board(8) == them) myWins -= 1
+
+      if (board(0) == them || board(3) == them || board(6) == them) myWins -= 1
+      if (board(2) == them || board(5) == them || board(8) == them) myWins -= 1
+
+      if (board(0) == me || board(1) == me || board(2) == me) theirWins -= 1
+      if (board(6) == me || board(7) == me || board(8) == me) theirWins -= 1
+
+      if (board(0) == me || board(3) == me || board(6) == me) theirWins -= 1
+      if (board(2) == me || board(5) == me || board(8) == me) theirWins -= 1
+    }
+
+    myWins - theirWins + BoardUtils.count2s(board, player) - BoardUtils.count2s(board, !player)
   }
 
   def getMovesInSubboard(board: ArrayBuffer[ArrayBuffer[Char]], activeBoard: Int) = {
@@ -205,5 +251,11 @@ object BoardUtils {
     var boardClone = ArrayBuffer[ArrayBuffer[Char]]()
     board.foreach(boardClone += _.clone)
     boardClone
+  }
+
+  def getWinBoard(wins: HashSet[Int]) = {
+    var winBoard = ArrayBuffer(' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ')
+    for (x <- wins) winBoard(x) = 'X'
+    winBoard
   }
 }

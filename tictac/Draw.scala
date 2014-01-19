@@ -2,6 +2,7 @@ package tictac
 import Game._
 import java.awt.Graphics2D
 import java.awt.Color
+import java.awt.FontMetrics
 
 object Draw {
   val guiSpacing = 10
@@ -50,6 +51,11 @@ object Draw {
     val winBlue = (winColor / 65536) % 256
 
     new Color((c1.getRed + winRed) % 256, (c1.getGreen + winGreen) % 256, (c1.getBlue + winBlue) % 256)
+  }
+
+  def drawWin(g: Graphics2D, text: String, c: Color, width: Int, height: Int) = {
+    g.setColor(blendWinColor(c))
+    g.drawString(text, (width - g.getFontMetrics().stringWidth(text)) / 2, height / 2)
   }
 
   def col(c: String) = "<font color = \"" + c + "\">"

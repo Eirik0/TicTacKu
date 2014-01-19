@@ -33,12 +33,10 @@ object PlayerMoves {
 
     val move = strategy.pickMove(TicTacRules, oracle, IntOrdering, position, position.legalMoves.toList)
     move match {
-      case Some(move) => {
-        return move
-      }
+      case Some(move) => return move
       case None => {
         println(position.board.mkString("", "\n", "\n") + position.isP1Turn + " " + position.activeBoard)
-        println(position.p1Wins.size + " " + position.p1Wins.size + " " + position.draws.size)
+        println(position.p1Wins.mkString(",") + " " + position.p2Wins.mkString(",") + " " + position.draws.mkString(","))
         throw new IllegalStateException("No moves?")
       }
     }
