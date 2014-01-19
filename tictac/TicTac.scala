@@ -13,9 +13,12 @@ import scala.concurrent.future
 import scala.concurrent.ExecutionContext.Implicits._
 import java.awt.Color
 import java.awt.Font
+import scala.collection.mutable.ArrayBuffer
 
 object TicTac extends SimpleSwingApplication {
-  val game = TicTacKu
+  var _game: TicTac = TicTacKu
+  def game_=(game: TicTac): Unit = _game = game
+  def game = _game
 
   var _isComputerMatch = false
   def isComputerMatch_=(isComputerMatch: Boolean): Unit = _isComputerMatch = isComputerMatch
@@ -38,6 +41,10 @@ object TicTac extends SimpleSwingApplication {
     private var _drawMouse = false
     def drawMouse_=(drawMouse: Boolean): Unit = _drawMouse = drawMouse
     def drawMouse = _drawMouse
+
+    private var _wonBoards = ArrayBuffer[Win]()
+    def wonBoards_=(wonBoards: ArrayBuffer[Win]): Unit = _wonBoards = wonBoards
+    def wonBoards = _wonBoards
 
     /**
      * Paint
@@ -71,16 +78,9 @@ object TicTac extends SimpleSwingApplication {
       }
 
       // Win lines
-      for (win <- game.wonBoards.values) {
+      for (win <- wonBoards) {
         if (win.isPlayer1) g.setColor(p1Color) else g.setColor(p2Color)
-        val x0 = (win.x0 * ddx + ddx / 2).toInt
-        val y0 = (win.y0 * ddy + ddy / 2).toInt
-        val x1 = (win.x1 * ddx + ddx / 2).toInt
-        val y1 = (win.y1 * ddy + ddy / 2).toInt
-
-        if (x0 == x1) drawThickHLine(g, x0, y0, x1, y1)
-        else if (0 == y1) drawThickVLine(g, x0, y0, x1, y1)
-        else drawThickDLine(g, x0, y0, x1, y1)
+        win.draw(g, ddx, ddy)
       }
 
       if (game.isP1Turn) g.setColor(p1Color) else g.setColor(p2Color)
@@ -94,7 +94,7 @@ object TicTac extends SimpleSwingApplication {
       }
 
       // Mouse Highlight
-      if (drawMouse && !game.gameOver && !game.isComputerThinking && !isComputerMatch) {
+      if (drawMouse && !game.isGameOver && !game.isComputerThinking && !isComputerMatch) {
         val (sqX, sqY) = ((mouseX / ddx.toInt) * ddx.toInt, (mouseY / ddy.toInt) * ddy.toInt)
         val (b, sb) = BoardUtils.getBoardNM((mouseX / ddx).toInt, (mouseY / ddy).toInt)
 
@@ -104,16 +104,16 @@ object TicTac extends SimpleSwingApplication {
       }
 
       // Special drawing if the game is over
-      if (game.gameOver) {
+      if (game.isGameOver) {
         var text = "Wins!!!"
         val scale = scala.math.min(width, height) / 10
         font = new Font("Consolas", Font.BOLD, scale)
         g.setFont(font)
 
-        if (game.isP1Winning) {
+        if (game.doesP1Win) {
           g.setColor(p1Color); g.drawString("Blue", scale, height / 2)
           g.setColor(blendWinColor(p1Color))
-        } else if (game.isP2Winning) {
+        } else if (game.doesP2Win) {
           g.setColor(p2Color); g.drawString("Red", scale, height / 2)
           g.setColor(blendWinColor(p2Color))
         } else {
@@ -150,10 +150,10 @@ object TicTac extends SimpleSwingApplication {
         repaint
       }
       // Mouse Clicks 
-      case MouseReleased(_, location, _, _, _) if !game.gameOver => {
+      case MouseReleased(_, location, _, _, _) if !game.isGameOver => {
         val (b, sb) = BoardUtils.getBoardNM((9 * location.getX / peer.getWidth).toInt, (9 * location.getY / peer.getHeight).toInt)
         if (b == game.activeBoard || game.activeBoard == -1) {
-          game.players match {
+          (game.player1, game.player2) match {
             case (Human, Human) => moveMaybe(b, sb, false)
             case (Human, Computer(_)) if game.isP1Turn => moveMaybe(b, sb, true)
             case (Computer(_), Human) if !game.isP1Turn => moveMaybe(b, sb, true)
@@ -172,6 +172,14 @@ object TicTac extends SimpleSwingApplication {
     var p2TotalWins = 0
     var totalDraws = 0
 
+    var games = HashMap[String, TicTac]()
+    def registerGame(g: TicTac) = games += (g.title -> g)
+
+    registerGame(TicTacKu)
+    registerGame(TicTacCon)
+
+    val gamesList = games.keySet.toList.sortWith(_ > _) // So Ku comes first
+
     var players = HashMap[String, Player]()
     def registerPlayer(name: String, player: Player) = players += (name -> player)
 
@@ -186,14 +194,14 @@ object TicTac extends SimpleSwingApplication {
     background = Color.WHITE
 
     def setWins() = {
-      if (game.isP1Winning) p1TotalWins += 1
-      else if (game.isP2Winning) p2TotalWins += 1
+      if (game.doesP1Win) p1TotalWins += 1
+      else if (game.doesP2Win) p2TotalWins += 1
       else totalDraws += 1
       winsLabel.text = "<HTML>" + col("blue") + " " + p1TotalWins + col("red") + " " + p2TotalWins + col("black") + " " + totalDraws + "</HTML>"
     }
 
     def setCurrentPlayer() = {
-      if (game.gameOver) {
+      if (game.isGameOver) {
         plLabel.text = "<HTML>" + col("blue") + "Player 1: </HTML>"
         p2Label.text = "<HTML>" + col("red") + "Player 2: </HTML>"
       } else if (game.isP1Turn) {
@@ -210,6 +218,10 @@ object TicTac extends SimpleSwingApplication {
     def getPlayer1 = getPlayer(p1Box.selection.item)
     def getPlayer2 = getPlayer(p2Box.selection.item)
 
+    def getGame = games(gameBox.selection.item)
+
+    val gameLabel = new Label("Game: ")
+    val gameBox = new ComboBox(gamesList)
     val plLabel = new Label("<HTML>" + col("blue") + "<u>Player 1: </HTML>")
     val p1Box = new ComboBox(playerList)
     val p2Label = new Label("<HTML>" + col("red") + "Player 2: </HTML>")
@@ -217,6 +229,8 @@ object TicTac extends SimpleSwingApplication {
     val newGameButton = new Button("New Game!")
     val winsLabel = new Label("<HTML>" + col("blue") + " " + p1TotalWins + col("red") + " " + p2TotalWins + col("black") + " " + totalDraws + "</HTML>")
 
+    contents += gameLabel
+    contents += gameBox
     contents += plLabel
     contents += p1Box
     contents += p2Label
@@ -235,22 +249,30 @@ object TicTac extends SimpleSwingApplication {
    */
   def moveMaybe(b: Int, sb: Int, makeComputerMove: Boolean) = {
     if (game.isValidMove(b, sb)) {
-      game.makeMove(b, sb)
+      game.makeMove(b, sb) match {
+        case Some(win) => ticTacPanel.wonBoards += win
+        case None => {}
+      }
       update()
       if (makeComputerMove) moveComputer()
     }
   }
 
   def moveComputer() = {
-    if (!game.gameOver) {
-      val futureMove = future { game.makeComputerMove() }
+    if (!game.isGameOver) {
+      val futureMove = future {
+        game.makeComputerMove() match {
+          case Some(win) => ticTacPanel.wonBoards += win
+          case None => {}
+        }
+      }
       futureMove.onSuccess { case _ => update() }
     }
   }
 
   def update() {
     Swing.onEDT {
-      if (game.gameOver) { playerSelectionPanel.setWins() }
+      if (game.isGameOver) { playerSelectionPanel.setWins() }
       else playerSelectionPanel.setCurrentPlayer()
       ticTacPanel.repaint
     }
@@ -260,7 +282,7 @@ object TicTac extends SimpleSwingApplication {
    * Main Frame
    */
   def top = new MainFrame {
-    title = "Tic Tac Ku"
+    title = "Tic Tac"
 
     val gamePanel = new BorderPanel {
       // Add Panels
@@ -272,21 +294,23 @@ object TicTac extends SimpleSwingApplication {
       reactions += {
         case ButtonClicked(`playerSelectionPanel`.newGameButton) => {
           game.reset()
+          game = playerSelectionPanel.getGame
           isComputerMatch = false
           playerSelectionPanel.setCurrentPlayer()
+          ticTacPanel.wonBoards.clear()
           ticTacPanel.repaint
 
           game.player1 = playerSelectionPanel.getPlayer1
           game.player2 = playerSelectionPanel.getPlayer2
 
-          game.players match {
+          (game.player1, game.player2) match {
             case (Computer(_), Computer(_)) => {
               isComputerMatch = true
               val futureGame = future {
                 do {
                   moveComputer()
                   Thread.sleep(33L)
-                } while (!game.gameOver)
+                } while (!game.isGameOver)
               }
               //futureGame.onSuccess { case _ => {} }
             }

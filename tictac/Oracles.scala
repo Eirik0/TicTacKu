@@ -15,24 +15,26 @@ object Oracles {
       val p1Wins = game.p1Wins
       val p2Wins = game.p2Wins
 
-      val p12s = (0 to 8).toList.filter(!game.ownedBoards.contains(_)).map(b => BoardUtils.count2s(game.board(b), true)).sum
-      val p22s = (0 to 8).toList.filter(!game.ownedBoards.contains(_)).map(b => BoardUtils.count2s(game.board(b), false)).sum
+      val ownedBoards = p1Wins ++ p2Wins ++ game.draws
+
+      val p12s = (0 to 8).toList.filter(!ownedBoards.contains(_)).map(b => BoardUtils.count2s(game.board(b), true)).sum
+      val p22s = (0 to 8).toList.filter(!ownedBoards.contains(_)).map(b => BoardUtils.count2s(game.board(b), false)).sum
 
       var totalMoves = 0
       game.board.foreach(sb => sb.foreach(c => if (c != ' ') totalMoves += 10))
 
       if (player) {
         if (game.p1Wins == 5) score += fastVictory - totalMoves
-        else if ((game.p1Wins + game.p2Wins + game.draws == 0 && game.p1Wins > game.p2Wins)) score += victory
+        else if ((game.p1Wins.size + game.p2Wins.size + game.draws.size == 0 && game.p1Wins.size > game.p2Wins.size)) score += victory
         else {
-          score += win * (p1Wins - p2Wins)
+          score += win * (p1Wins.size - p2Wins.size)
           score += two * (p12s - p22s)
         }
       } else {
         if (game.p2Wins == 5) score += fastVictory - totalMoves
-        else if ((game.p1Wins + game.p2Wins + game.draws == 0 && game.p2Wins > game.p1Wins)) score += victory
+        else if ((game.p1Wins.size + game.p2Wins.size + game.draws.size == 0 && game.p2Wins.size > game.p1Wins.size)) score += victory
         else {
-          score += win * (p2Wins - p1Wins)
+          score += win * (p2Wins.size - p1Wins.size)
           score += two * (p22s - p12s)
         }
       }
@@ -45,13 +47,15 @@ object Oracles {
     def score(player: Boolean, game: Position): Int = {
       val me = if (player) 'X' else 'O'
       val them = if (player) 'O' else 'X'
-      val myBoards = if (player) game.p1Wins else game.p2Wins
-      val theirBoards = if (player) game.p2Wins else game.p1Wins
+      val myBoards = if (player) game.p1Wins.size else game.p2Wins.size
+      val theirBoards = if (player) game.p2Wins.size else game.p1Wins.size
       var myScore = 0
+
+      val ownedBoards = game.p1Wins ++ game.p2Wins ++ game.draws
 
       var b = 0
       do {
-        if (!game.ownedBoards.contains(b)) {
+        if (!ownedBoards.contains(b)) {
           val board = game.board(b)
           var myWins = 8
           var theirWins = 8

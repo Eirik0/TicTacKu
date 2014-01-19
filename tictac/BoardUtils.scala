@@ -179,6 +179,19 @@ object BoardUtils {
     total
   }
 
+  def getMovesInSubboard(board: ArrayBuffer[ArrayBuffer[Char]], activeBoard: Int) = {
+    val subboard = board(activeBoard)
+    var moves = ArrayBuffer[(Int, Int)]()
+    var sb = 0
+
+    do {
+      if (subboard(sb) == ' ') moves += ((activeBoard, sb))
+      sb += 1
+    } while (sb < subboard.size)
+
+    moves
+  }
+
   def emptyBoard = {
     var board = ArrayBuffer[ArrayBuffer[Char]]()
 

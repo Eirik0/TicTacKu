@@ -53,4 +53,35 @@ object Draw {
   }
 
   def col(c: String) = "<font color = \"" + c + "\">"
+
+  /**
+   * The Win class is used by the gui and represents how to draw that particular win on the board.
+   */
+  sealed abstract class Win {
+    def draw(g: Graphics2D, ddx: Float, ddy: Float): Unit
+    def isPlayer1: Boolean
+  }
+
+  case class WinKu(x0: Int, y0: Int, x1: Int, y1: Int, isP1: Boolean) extends Win {
+    def draw(g: Graphics2D, ddx: Float, ddy: Float) {
+      val dx0 = (x0 * ddx + ddx / 2).toInt
+      val dy0 = (y0 * ddy + ddy / 2).toInt
+      val dx1 = (x1 * ddx + ddx / 2).toInt
+      val dy1 = (y1 * ddy + ddy / 2).toInt
+      if (dx0 == dx1) drawThickHLine(g, dx0, dy0, dx1, dy1)
+      else if (dy0 == dy1) drawThickVLine(g, dx0, dy0, dx1, dy1)
+      else drawThickDLine(g, dx0, dy0, dx1, dy1)
+    }
+    def isPlayer1 = isP1
+  }
+
+  case class WinCon(board: Int, isP1: Boolean) extends Win {
+    def draw(g: Graphics2D, ddx: Float, ddy: Float) {
+      val (activeBoardX, activeBoardY) = BoardUtils.getActiveBoardXY(board)
+      val dx = ddx * 3
+      val dy = ddy * 3
+      g.fillOval((activeBoardX * dx + 3 * ddx / 4).toInt, (activeBoardY * dy + 3 * ddy / 4).toInt, (dx / 2).toInt, (dy / 2).toInt)
+    }
+    def isPlayer1 = isP1
+  }
 }
