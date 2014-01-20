@@ -1,12 +1,11 @@
 package tictac
-
 import swing._
 import Swing._
 import event._
 import PlayerMoves._
 import Oracles._
 import Game._
-import Rules._
+import Strategy._
 import Draw._
 import scala.collection.mutable.HashMap
 import scala.concurrent.future

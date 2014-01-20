@@ -1,6 +1,6 @@
 package tictac
 
-import Rules._
+import Strategy._
 import PlayerMoves._
 import Draw.Win
 import Draw.WinKu
@@ -248,7 +248,7 @@ object Game {
   }
 
   // Position, above, is scored in integers, players are booleans and moves are pairs of integers.
-  object TicTacRules extends GameRules[Position, Int, Boolean, (Int, Int)] {
+  object TicTacRules extends GameRules[Position, Boolean] {
     def children(position: Position): List[Position] = position.legalMoves.par.map(update(_)(position)).toList
 
     def update(move: (Int, Int))(position: Position): Position = {

@@ -1,6 +1,6 @@
 package tictac
 
-import Rules._
+import Strategy._
 import Game._
 
 object Oracles {

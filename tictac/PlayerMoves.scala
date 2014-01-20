@@ -1,6 +1,6 @@
 package tictac
 import Game._
-import Rules._
+import Strategy._
 import Oracles._
 import jplayer._
 
@@ -31,15 +31,22 @@ object PlayerMoves {
   def getMoveMinimax(oracle: GameOracle[Position, Int, Boolean], depth: Int, position: Position): (Int, Int) = {
     val strategy = MinimaxStrategy[Position, Int, Boolean](depth)
 
-    val move = strategy.pickMove(TicTacRules, oracle, IntOrdering, position, position.legalMoves.toList)
-    move match {
-      case Some(move) => return move
+    object IntOrdering extends Ordering[Int] {
+      def compare(x: Int, y: Int): Int = x - y
+    }
+    
+    val movesList = NonEmptyListUtils.fromList(position.legalMoves.toList) match {
+      case Some(move) => move
       case None => {
         println(position.board.mkString("", "\n", "\n") + position.isP1Turn + " " + position.activeBoard)
         println(position.p1Wins.mkString(",") + " " + position.p2Wins.mkString(",") + " " + position.draws.mkString(","))
         throw new IllegalStateException("No moves?")
       }
     }
+    
+    strategy.pickMove(TicTacRules, oracle, IntOrdering, position,
+    				  TicTacRules.update(_: (Int, Int))(position),
+    				  movesList);
   }
 
   def getMovej(position: Position) = {
