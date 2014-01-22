@@ -1,7 +1,7 @@
 package jplayer;
 
-public class Board {
-	public Board(int board) {
+public class Cell {
+	public Cell(int board) {
 		this.board = board;
 	}
 

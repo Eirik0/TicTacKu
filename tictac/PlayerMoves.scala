@@ -1,5 +1,7 @@
 package tictac
+
 import Game._
+import Boards._
 import Strategy._
 import Oracles._
 import jplayer._
@@ -31,31 +33,23 @@ object PlayerMoves {
   def getMoveMinimax(oracle: GameOracle[Position, Int, Boolean], depth: Int, position: Position): (Int, Int) = {
     val strategy = MinimaxStrategy[Position, Int, Boolean](depth)
 
-    object IntOrdering extends Ordering[Int] {
-      def compare(x: Int, y: Int): Int = x - y
-    }
-    
     val movesList = NonEmptyListUtils.fromList(position.legalMoves.toList) match {
       case Some(move) => move
       case None => {
         println(position.board.mkString("", "\n", "\n") + position.isP1Turn + " " + position.activeBoard)
-        println(position.p1Wins.mkString(",") + " " + position.p2Wins.mkString(",") + " " + position.draws.mkString(","))
+        println(position.state)
         throw new IllegalStateException("No moves?")
       }
     }
-    
-    strategy.pickMove(TicTacRules, oracle, IntOrdering, position,
-    				  TicTacRules.update(_: (Int, Int))(position),
-    				  movesList);
+
+    strategy.pickMove(TicTacRules, oracle, IntOrdering, position, TicTacRules.update(_: (Int, Int))(position), movesList);
   }
 
   def getMovej(position: Position) = {
     val board = position.board
     val activeBoard = position.activeBoard
     val isP1Turn = position.isP1Turn
-    val p1Wins = position.p1Wins
-    val p2Wins = position.p2Wins
-    val draws = position.draws
+    val inactiveBoards = position.state.inactive
 
     val boardj = new java.util.ArrayList[java.util.ArrayList[Square]]
     for (i <- 0 to 8) {
@@ -66,14 +60,16 @@ object PlayerMoves {
       boardj.add(subboardj)
     }
 
-    val p1Winsj = new java.util.ArrayList[Board]
-    p1Wins.foreach(i => p1Winsj.add(new Board(i)))
+    val p1Winsj = new java.util.ArrayList[Cell]
+    val p2Winsj = new java.util.ArrayList[Cell]
+    val drawsj = new java.util.ArrayList[Cell]
 
-    val p2Winsj = new java.util.ArrayList[Board]
-    p2Wins.foreach(i => p2Winsj.add(new Board(i)))
-
-    val drawsj = new java.util.ArrayList[Board]
-    draws.foreach(i => drawsj.add(new Board(i)))
+    for (i <- 0 to 8) {
+      val player = getPlayerFromBoard(inactiveBoards, i)
+      if (player == Boards.p1) p1Winsj.add(new Cell(i))
+      else if (player == Boards.p2) p2Winsj.add(new Cell(i))
+      else if (player == Boards.draw) drawsj.add(new Cell(i))
+    }
 
     val player = new JPlayer
 

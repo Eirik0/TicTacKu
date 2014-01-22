@@ -36,10 +36,10 @@ object Strategy {
         case (head, None) => Some(Singleton(head))
         case (head, Some(tail)) => Some(Cons(head, tail))
       })
-    
+
     def toList[A](l: NonEmptyList[A]): List[A] =
       l.fold(head => List(head),
-            (head, tail: List[A]) => head +: tail)
+        (head, tail: List[A]) => head +: tail)
   }
 
   case class Singleton[A](head: A) extends NonEmptyList[A] {
@@ -60,4 +60,6 @@ object Strategy {
       ord: Ordering[R], position: S, update: M => S,
       candidates: NonEmptyList[M]): M
   }
+  /** Int Ordering **/
+  object IntOrdering extends Ordering[Int] { def compare(x: Int, y: Int): Int = x - y }
 }

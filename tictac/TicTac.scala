@@ -179,8 +179,8 @@ object TicTac extends SimpleSwingApplication {
 
     registerPlayer("Human", Human)
     registerPlayer("Rando", Computer(getRandomMove))
-    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, 5, _)))
-    registerPlayer("Machiavelli", Computer(getMoveMinimax(PossibleWins, 5, _)))
+    registerPlayer("Nick Vanderbot", Computer(getMoveMinimax(FastWin, 6, _)))
+    registerPlayer("Machiavelli", Computer(getMoveMinimax(PossibleWins, 6, _)))
     registerPlayer("Sandy", Computer(getMoveMinimax(MovesToWin, 5, _)))
     registerPlayer("JPlayer", Computer(getMovej))
 
@@ -300,14 +300,13 @@ object TicTac extends SimpleSwingApplication {
           game.player2 = playerSelectionPanel.getPlayer2
 
           (game.player1, game.player2) match {
-            case (Computer(_), Computer(_)) => {
+            case (Computer(_), Computer(_)) => { // Computer match starts here
               isComputerMatch = true
               val futureGame = future {
                 do {
                   moveComputer()
                 } while (!game.isGameOver)
               }
-              //futureGame.onSuccess { case _ => {} }
             }
             case (Computer(_), Human) if game.isP1Turn => moveComputer()
             case (_, Computer(_)) if !game.isP1Turn => moveComputer()

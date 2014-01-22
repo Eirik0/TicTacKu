@@ -9,6 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashSet
+import tictac.Boards._
 
 object Game {
   /**
@@ -57,17 +58,9 @@ object Game {
     def moves_=(moves: Int): Unit = _moves = moves
     def moves = _moves
 
-    private var _p1Wins = HashSet[Int]()
-    def p1Wins_=(p1Wins: HashSet[Int]): Unit = _p1Wins = p1Wins
-    def p1Wins = _p1Wins
-
-    private var _p2Wins = HashSet[Int]()
-    def p2Wins_=(p2Wins: HashSet[Int]): Unit = _p2Wins = p2Wins
-    def p2Wins = _p2Wins
-
-    private var _draws = HashSet[Int]()
-    def draws_=(draws: HashSet[Int]): Unit = _draws = draws
-    def draws = _draws
+    private var _boardState = BoardState(0, 0, 0, 0)
+    def boardState_=(boardState: BoardState): Unit = _boardState = boardState
+    def boardState = _boardState
 
     /**
      * The methods common to the different variations of the game.
@@ -78,9 +71,7 @@ object Game {
       activeBoard = -1
       isP1First = !isP1First
       isP1Turn = isP1First
-      p1Wins = HashSet[Int]()
-      p2Wins = HashSet[Int]()
-      draws = HashSet[Int]()
+      boardState = BoardState(0, 0, 0, 0)
     }
 
     def makeMove(b: Int, sb: Int) = {
@@ -90,22 +81,19 @@ object Game {
 
       // Check for a new win
       val maybeWin = {
-        if (!p1Wins.contains(b) && !p2Wins.contains(b) && !draws.contains(b)) {
-          BoardUtils.findWin(board(b)) match {
-            case Some((w1, w2)) => {
-              val (x0, y0) = BoardUtils.getBoardXY(b, w1)
-              val (x1, y1) = BoardUtils.getBoardXY(b, w2)
-              if (isP1Turn) p1Wins += b else p2Wins += b
-              Some(getWin(b, x0, y0, x1, y1, isP1Turn))
-            }
-            case None => {
-              if (board(b).forall(_ != ' ')) draws += b
-              None
-            }
+        if (boardState.isBoardInPlay(b)) BoardUtils.findWin(board(b)) match {
+          case Some((w1, w2)) => {
+            boardState = boardState.updatedWith(b, if (isP1Turn) Boards.p1 else Boards.p2)
+            val (x0, y0) = BoardUtils.getBoardXY(b, w1)
+            val (x1, y1) = BoardUtils.getBoardXY(b, w2)
+            Some(getWin(b, x0, y0, x1, y1, isP1Turn))
           }
-        } else {
-          None
+          case None => {
+            if (BoardUtils.isFull(board(b))) boardState = boardState.updatedWith(b, Boards.draw)
+            None
+          }
         }
+        else None
       }
 
       activeBoard = flow.getUpdatedActive(getPosition, sb)
@@ -116,7 +104,7 @@ object Game {
     }
 
     // Returns the position for the computer to analyze
-    def getPosition = Position(board, activeBoard, isP1Turn, p1Wins, p2Wins, draws, flow)
+    def getPosition = Position(board, activeBoard, isP1Turn, boardState, flow)
 
     // Returns the move which the computer would make in the current position
     private def getComputerMove = {
@@ -143,7 +131,6 @@ object Game {
     }
 
     def isValidMove(b: Int, sb: Int) = flow.isValidMove(getPosition, b, sb)
-
     def isLegalMove(b: Int, sb: Int) = flow.isLegalMove(getPosition, b, sb)
 
     def isGameOver = flow.isGameOver(getPosition)
@@ -196,13 +183,13 @@ object Game {
   object FlowKu extends TicTacFlow {
     val wholeBoardMoves = (p: Position) => ArrayBuffer[(Int, Int)]() ++ (0 to 8).par.flatMap(BoardUtils.getMovesInSubboard(p.board, _))
 
-    val getUpdatedActive = (p: Position, sb: Int) => if (p.board(sb).forall(_ != ' ')) -1 else sb
+    val getUpdatedActive = (p: Position, sb: Int) => if (BoardUtils.isFull(p.board(sb))) -1 else sb
 
     val isLegalMove = (p: Position, b: Int, sb: Int) => isValidMove(p, b, sb)
 
-    val isGameOver = (p: Position) => p.p1Wins.size == 5 || p.p2Wins.size == 5 || p.p1Wins.size + p.p2Wins.size + p.draws.size == 9
-    val doesP1Win = (p: Position) => isGameOver(p) && p.p1Wins.size > p.p2Wins.size
-    val doesP2Win = (p: Position) => isGameOver(p) && p.p1Wins.size < p.p2Wins.size
+    val isGameOver = (p: Position) => p.state.p1Wins == 5 || p.state.p2Wins == 5 || p.state.p1Wins + p.state.p2Wins + p.state.draws == 9
+    val doesP1Win = (p: Position) => isGameOver(p) && p.state.p1Wins > p.state.p2Wins
+    val doesP2Win = (p: Position) => isGameOver(p) && p.state.p1Wins < p.state.p2Wins
   }
 
   /**
@@ -215,31 +202,29 @@ object Game {
     def getWin(b: Int, x0: Int, y0: Int, x1: Int, y1: Int, isP1Turn: Boolean) = WinCon(b, isP1Turn)
   }
 
-  // Flow for TicTacCon
+  /**
+   *  Flow for TicTacCon
+   */
   object FlowCon extends TicTacFlow {
-    private def ownedBoards(p: Position) = p.p1Wins ++ p.p2Wins ++ p.draws
-
     val wholeBoardMoves = (p: Position) => {
       (0 to 8).par.foldLeft(ArrayBuffer[(Int, Int)]()) { (moves, b) =>
-        if (!ownedBoards(p).contains(b)) moves ++ BoardUtils.getMovesInSubboard(p.board, b) else moves
+        if (p.state.isBoardInPlay(b)) moves ++ BoardUtils.getMovesInSubboard(p.board, b) else moves
       }
     }
 
-    val isLegalMove = (p: Position, b: Int, sb: Int) => isValidMove(p, b, sb) && !ownedBoards(p).contains(b)
+    val isLegalMove = (p: Position, b: Int, sb: Int) => isValidMove(p, b, sb) && p.state.isBoardInPlay(b)
 
-    val getUpdatedActive = (p: Position, sb: Int) => if (p.board(sb).forall(_ != ' ') || ownedBoards(p).contains(sb)) -1 else sb
+    val getUpdatedActive = (p: Position, sb: Int) => if (BoardUtils.isFull(p.board(sb)) || !p.state.isBoardInPlay(sb)) -1 else sb
 
-    val isGameOver = (p: Position) => doesP1Win(p) || doesP2Win(p) || p.p1Wins.size + p.p2Wins.size + p.draws.size == 9
-    val doesP1Win = (p: Position) => BoardUtils.findWin(BoardUtils.getWinBoard(p.p1Wins)) != None
-    val doesP2Win = (p: Position) => BoardUtils.findWin(BoardUtils.getWinBoard(p.p2Wins)) != None
+    val isGameOver = (p: Position) => doesP1Win(p) || doesP2Win(p) || p.state.p1Wins + p.state.p2Wins + p.state.draws == 9
+    val doesP1Win = (p: Position) => BoardUtils.winExists((BoardUtils.getWinBoard(p.state, 'X')), 'X')
+    val doesP2Win = (p: Position) => BoardUtils.winExists((BoardUtils.getWinBoard(p.state, 'O')), 'O')
   }
 
   /**
    * Position and Rules
    */
-  case class Position(board: ArrayBuffer[ArrayBuffer[Char]], activeBoard: Int, isP1Turn: Boolean,
-    p1Wins: HashSet[Int], p2Wins: HashSet[Int], draws: HashSet[Int], flow: TicTacFlow) {
-    def ownedBoards = p1Wins ++ p2Wins ++ draws
+  case class Position(board: ArrayBuffer[ArrayBuffer[Char]], activeBoard: Int, isP1Turn: Boolean, state: BoardState, flow: TicTacFlow) {
     def legalMoves = flow.allLegalMoves(this)
     def updateActive(sb: Int) = flow.getUpdatedActive(this, sb)
     def isGameOver = flow.isGameOver(this)
@@ -256,26 +241,19 @@ object Game {
       var newBoard = ArrayBuffer[ArrayBuffer[Char]]()
       position.board.foreach(newBoard += _.clone)
 
-      var newP1Wins = position.p1Wins.clone
-      var newP2Wins = position.p2Wins.clone
-      var newDraws = position.draws.clone
-
-      var subboard = newBoard(b)
-      val isFull = subboard.forall(_ != ' ')
+      var newState = position.state
 
       val xo = if (position.isP1Turn) 'X' else 'O'
+      var subboard = newBoard(b)
       subboard(sb) = xo
 
-      if (!position.p1Wins.contains(b) && !position.p2Wins.contains(b) && !position.draws.contains(b)) {
-        BoardUtils.findWin(subboard) match {
-          case Some(_) => {
-            if (position.isP1Turn) newP1Wins += b else newP2Wins += b
-          }
-          case None => if (isFull) newDraws += b
-        }
+      if (position.state.isBoardInPlay(b)) {
+        if (BoardUtils.winExists(subboard, xo)) {
+          newState = newState.updatedWith(b, if (position.isP1Turn) Boards.p1 else Boards.p2)
+        } else if (BoardUtils.isFull(subboard)) newState = newState.updatedWith(b, Boards.draw)
       }
 
-      Position(newBoard, position.updateActive(sb), !position.isP1Turn, newP1Wins, newP2Wins, newDraws, position.flow)
+      Position(newBoard, position.updateActive(sb), !position.isP1Turn, newState, position.flow)
     }
 
     def turn(position: Position) = position.isP1Turn

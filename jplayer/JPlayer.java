@@ -13,7 +13,7 @@ public class JPlayer {
 	// 0 1 2
 	// 3 4 5
 	// 6 7 8
-	public Move getMoveExample(ArrayList<ArrayList<Square>> board, int activeBoard, boolean isP1Turn, ArrayList<Board> p1Wins, ArrayList<Board> p2Wins, ArrayList<Board> draws) {
+	public Move getMoveExample(ArrayList<ArrayList<Square>> board, int activeBoard, boolean isP1Turn, ArrayList<Cell> p1Wins, ArrayList<Cell> p2Wins, ArrayList<Cell> draws) {
 		// char iAm = isP1Turn ? 'X' : 'O';
 		int key = 0;
 
