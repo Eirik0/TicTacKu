@@ -197,7 +197,11 @@ object BoardUtils {
 
   def getScoredLine(sb: ArrayBuffer[Char], n: Int) = ScoredLine(getLine(sb, n))
 
-  def count2s(b: ArrayBuffer[Char], player: Char) = {
+  /**
+   * Methods for scoring boards.
+   * player is declared to be Int to allow for unsafe type conversions.
+   */
+  def count2s(b: ArrayBuffer[Char], player: Int) = {
     var twos = 0
     // 2s with square 4
     if (b(4) == player) {
@@ -238,8 +242,8 @@ object BoardUtils {
     twos
   }
 
-  def scorePossibleWins(b: ArrayBuffer[Char], player: Boolean) = {
-    val (me, them) = if (player) ('X', 'O') else ('O', 'X')
+  def scorePossibleWins(b: ArrayBuffer[Char], me: Int) = {
+    val them = me ^ 23
     var score = 0
     if (b(3) == them || b(4) == them || b(5) == them) score -= 1
     if (b(6) == them || b(7) == them || b(8) == them) score -= 1
@@ -248,7 +252,6 @@ object BoardUtils {
     if (b(2) == them || b(5) == them || b(8) == them) score -= 1
     if (b(0) == them || b(4) == them || b(8) == them) score -= 1
     if (b(2) == them || b(4) == them || b(6) == them) score -= 1
-
     if (b(3) == me || b(4) == me || b(5) == me) score += 1
     if (b(6) == me || b(7) == me || b(8) == me) score += 1
     if (b(0) == me || b(3) == me || b(6) == me) score += 1
@@ -259,8 +262,8 @@ object BoardUtils {
     score
   }
 
-  def scoreWinsInOne(currentBoard: ArrayBuffer[Char], player: Boolean) = {
-    val (me, them) = if (player) ('X', 'O') else ('O', 'X')
+  def scoreWinsInOne(currentBoard: ArrayBuffer[Char], me: Char) = {
+    val them = (me ^ 23).toChar
     var myOneAways = 0
     var theirOneAways = 0
 
@@ -277,8 +280,8 @@ object BoardUtils {
     myOneAways - theirOneAways
   }
 
-  def scoreWinsInTwo(currentBoard: ArrayBuffer[Char], player: Boolean) = {
-    val (me, them) = if (player) ('X', 'O') else ('O', 'X')
+  def scoreWinsInTwo(currentBoard: ArrayBuffer[Char], me: Char) = {
+    val them = (me ^ 23).toChar
     var myTwoAways = 0
     var theirTwoAways = 0
 
@@ -286,9 +289,9 @@ object BoardUtils {
       if (currentBoard(i) == ' ') {
         var clone = currentBoard.clone
         clone(i) = me
-        myTwoAways += scoreWinsInOne(clone, player)
+        myTwoAways += scoreWinsInOne(clone, me)
         clone(i) = them
-        theirTwoAways += scoreWinsInOne(clone, !player)
+        theirTwoAways += scoreWinsInOne(clone, them)
       }
     }
     myTwoAways - theirTwoAways

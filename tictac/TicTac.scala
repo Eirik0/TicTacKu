@@ -254,8 +254,8 @@ object TicTac extends SimpleSwingApplication {
   }
 
   def moveComputer() = {
-    Thread.sleep(33L)
-    if (!game.isGameOver && !game.isComputerThinking) {
+    Thread.sleep(100L)
+    if (!game.isComputerThinking && !game.isGameOver) {
       val futureMove = future {
         game.makeComputerMove() match {
           case Some(win) => ticTacPanel.wonBoards += win
@@ -309,7 +309,7 @@ object TicTac extends SimpleSwingApplication {
               }
             }
             case (Computer(_), Human) if game.isP1Turn => moveComputer()
-            case (_, Computer(_)) if !game.isP1Turn => moveComputer()
+            case (Human, Computer(_)) if !game.isP1Turn => moveComputer()
             case _ => {} // Human v. Human handled elsewhere
           }
         }

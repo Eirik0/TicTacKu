@@ -71,6 +71,7 @@ object Game {
       activeBoard = -1
       isP1First = !isP1First
       isP1Turn = isP1First
+      moves = 0
       boardState = BoardState(0, 0, 0, 0)
     }
 
@@ -233,29 +234,30 @@ object Game {
   }
 
   // Position, above, is scored in integers, players are booleans and moves are pairs of integers.
-  object TicTacRules extends GameRules[Position, Boolean] {
+  object TicTacRules extends GameRules[Position, Char] {
     def children(position: Position): List[Position] = position.legalMoves.par.map(update(_)(position)).toList
 
     def update(move: (Int, Int))(position: Position): Position = {
       val (b, sb) = move
-      var newBoard = ArrayBuffer[ArrayBuffer[Char]]()
-      position.board.foreach(newBoard += _.clone)
+      val xo = if (position.isP1Turn) 'X' else 'O'
+
+      var newBoard = position.board.clone
+      var subboard = newBoard(b).clone //only clone the board that changed
+
+      newBoard(b) = subboard
+      subboard(sb) = xo
 
       var newState = position.state
 
-      val xo = if (position.isP1Turn) 'X' else 'O'
-      var subboard = newBoard(b)
-      subboard(sb) = xo
-
       if (position.state.isBoardInPlay(b)) {
         if (BoardUtils.winExists(subboard, xo)) {
-          newState = newState.updatedWith(b, if (position.isP1Turn) Boards.p1 else Boards.p2)
-        } else if (BoardUtils.isFull(subboard)) newState = newState.updatedWith(b, Boards.draw)
+          newState = newState.updatedWith(b, if (position.isP1Turn) 1 else 2)
+        } else if (BoardUtils.isFull(subboard)) newState = newState.updatedWith(b, 3)
       }
 
       Position(newBoard, position.updateActive(sb), !position.isP1Turn, newState, position.flow)
     }
 
-    def turn(position: Position) = position.isP1Turn
+    def turn(position: Position) = if (position.isP1Turn) 'X' else 'O'
   }
 }

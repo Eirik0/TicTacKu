@@ -30,8 +30,8 @@ object PlayerMoves {
   }
 
   // Minimax
-  def getMoveMinimax(oracle: GameOracle[Position, Int, Boolean], depth: Int, position: Position): (Int, Int) = {
-    val strategy = MinimaxStrategy[Position, Int, Boolean](depth)
+  def getMoveMinimax(oracle: GameOracle[Position, Int, Char], depth: Int, position: Position): (Int, Int) = {
+    val strategy = MinimaxStrategy[Position, Int, Char](depth)
 
     val movesList = NonEmptyListUtils.fromList(position.legalMoves.toList) match {
       case Some(move) => move
